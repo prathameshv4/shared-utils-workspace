@@ -1,59 +1,74 @@
-# SharedUtilsWorkspace
+# ng-secure-fetch Workspace
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.7.
+This is the development workspace for **ng-secure-fetch** - a zero-dependency Angular library providing RSA-2048-OAEP + AES-256-GCM hybrid encryption with automatic HTTP request/response encryption.
 
-## Development server
+## About ng-secure-fetch
 
-To start a local development server, run:
+ng-secure-fetch is a browser-only Angular library (17+) that uses the Web Crypto API to provide transparent encryption/decryption for HTTP requests and responses.
 
-```bash
-ng serve
-```
+**Key Features:**
+- Hybrid encryption: RSA-2048-OAEP + AES-256-GCM
+- Automatic HTTP interceptors
+- SessionStorage caching (95% faster page refresh)
+- Public key pinning (SHA-256 hash verification)
+- Advanced pattern matching with dynamic segments
+- Zero dependencies
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+For complete documentation, see: [`projects/ng-secure-fetch/README.md`](./projects/ng-secure-fetch/README.md)
 
-## Code scaffolding
+## Building the Library
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+To build the ng-secure-fetch library:
 
 ```bash
-ng generate --help
+ng build ng-secure-fetch
 ```
 
-## Building
+Build artifacts will be stored in the `dist/ng-secure-fetch/` directory.
 
-To build the project run:
+## Running Tests
+
+To execute the library unit tests:
 
 ```bash
-ng build
+ng test ng-secure-fetch
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+## Publishing to npm
 
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+After building, navigate to the dist folder and publish:
 
 ```bash
-ng test
+cd dist/ng-secure-fetch
+npm publish
 ```
 
-## Running end-to-end tests
+## Development
 
-For end-to-end (e2e) testing, run:
+This workspace is configured for Angular library development using Angular CLI version 20.3.3.
 
-```bash
-ng e2e
+### Project Structure
+
 ```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+shared-utils-workspace/
+├── projects/
+│   └── ng-secure-fetch/           # Library source code
+│       ├── src/
+│       │   ├── lib/
+│       │   │   ├── config/
+│       │   │   ├── initializers/
+│       │   │   ├── interceptors/
+│       │   │   ├── models/
+│       │   │   └── services/
+│       │   └── public-api.ts
+│       ├── package.json
+│       └── README.md
+└── dist/
+    └── ng-secure-fetch/           # Build output
+```
 
 ## Additional Resources
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+- [ng-secure-fetch Documentation](./projects/ng-secure-fetch/README.md)
+- [Angular CLI Documentation](https://angular.dev/tools/cli)
+- [Web Crypto API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API)

@@ -1,12 +1,41 @@
 {
   "name": "ng-secure-fetch",
-  "version": "0.0.1",
+  "version": "1.0.0",
+  "description": "Zero-dependency Angular library providing RSA-2048-OAEP + AES-256-GCM hybrid encryption with automatic HTTP request/response encryption and sessionStorage caching",
+  "keywords": [
+    "angular",
+    "encryption",
+    "security",
+    "http",
+    "interceptor",
+    "rsa",
+    "aes",
+    "hybrid-encryption",
+    "web-crypto-api",
+    "zero-dependencies"
+  ],
+  "author": "Prathamesh Vasekar <prathameshvasekar4.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/prathameshv4/ng-secure-fetch.git"
+  },
+  "bugs": {
+    "url": "https://github.com/prathameshv4/ng-secure-fetch/issues"
+  },
+  "homepage": "https://github.com/prathameshv4/ng-secure-fetch#readme",
   "peerDependencies": {
-    "@angular/common": "^19.2.0",
-    "@angular/core": "^19.2.0"
+    "@angular/common": ">=17.0.0",
+    "@angular/core": ">=17.0.0"
   },
   "dependencies": {
     "tslib": "^2.3.0"
   },
-  "sideEffects": false
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "browser": {
+    "crypto": false
+  }
 }

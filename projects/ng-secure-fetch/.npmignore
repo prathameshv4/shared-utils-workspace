@@ -1,0 +1,32 @@
+# Source files
+src/
+*.spec.ts
+*.spec.js
+
+# TypeScript config
+tsconfig.spec.json
+tsconfig.lib.json
+tsconfig.lib.prod.json
+
+# Test files
+karma.conf.js
+*.spec.ts
+
+# Build files
+*.log
+*.tgz
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+*.map
+node_modules/
