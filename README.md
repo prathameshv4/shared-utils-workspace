@@ -36,12 +36,24 @@ ng test ng-secure-fetch
 
 ## Publishing to npm
 
-After building, navigate to the dist folder and publish:
+### Publish Steps
 
+1. Build the library:
+```bash
+ng build ng-secure-fetch
+```
+
+2. Navigate to the dist folder:
 ```bash
 cd dist/ng-secure-fetch
+```
+
+3. Publish to npm:
+```bash
 npm publish
 ```
+
+**Note:** The `.npmrc` file contains your npm token and is excluded from git for security.
 
 ## Development
 
