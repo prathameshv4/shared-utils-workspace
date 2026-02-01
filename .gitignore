@@ -43,4 +43,4 @@ __screenshots__/
 Thumbs.db
 
 # npm configuration (contains sensitive tokens)
-# .npmrc
+.npmrc
