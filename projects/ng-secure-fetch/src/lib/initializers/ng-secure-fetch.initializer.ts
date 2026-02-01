@@ -16,9 +16,25 @@ export function initializeNgSecureFetchFactory(): () => Observable<void> {
       return of(void 0);
     }
 
+    // If public key is provided directly in config, use it
+    if (config.publicKey) {
+      config.enableDebugLogging && console.log('[ng-secure-fetch] Using public key from config');
+      
+      return new Observable<void>((subscriber: Subscriber<void>) => {
+        validateAndSetPublicKey(cryptoService, config, config.publicKey!).then(() => {
+          config.enableDebugLogging && console.log('[ng-secure-fetch] Public key from config validated and imported');
+          subscriber.next();
+          subscriber.complete();
+        }).catch(err => {
+          console.error('[ng-secure-fetch] Failed to import public key from config:', err);
+          subscriber.error(err);
+        });
+      });
+    }
+
     if (!config.publicKeyEndpoint) {
-      console.error('[ng-secure-fetch] publicKeyEndpoint required');
-      return throwError(() => new Error('publicKeyEndpoint required'));
+      console.error('[ng-secure-fetch] publicKeyEndpoint or publicKey required');
+      return throwError(() => new Error('publicKeyEndpoint or publicKey required'));
     }
 
     // Check for cached public key in sessionStorage first
@@ -108,7 +124,8 @@ function fetchPublicKeyFromAPI(http: HttpClient, cryptoService: CryptoService, c
     }),
 
     catchError((error: any) => {
-      console.error('[ng-secure-fetch] Initialization failed. Set enableEncryption: false to bypass');
+      console.error('[ng-secure-fetch] Initialization failed. App will not render until this is resolved.');
+      console.error('[ng-secure-fetch] To bypass encryption, set enableEncryption: false');
       return throwError(() => error);
     })
   );

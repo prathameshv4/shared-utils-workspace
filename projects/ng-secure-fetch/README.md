@@ -17,7 +17,7 @@ Zero-dependency Angular library providing **RSA-2048-OAEP + AES-256-GCM hybrid e
 
 ## Compatibility
 
-- **Angular**: 17+ (compatible with Angular 17 and all future versions)
+- **Angular**: 16+ (compatible with Angular 16 and all future versions)
 - **Environment**: Browser only (uses `window.crypto` Web Crypto API)
 - **Node.js**: Not supported in standard Node.js environments without polyfills
 
@@ -31,6 +31,8 @@ npm install ng-secure-fetch
 
 ### 1. Import and Configure
 
+**Option 1: Fetch Public Key from API**
+
 ```typescript
 import { ApplicationConfig } from '@angular/core';
 import { provideNgSecureFetch } from 'ng-secure-fetch';
@@ -41,15 +43,35 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideNgSecureFetch({
       enableEncryption: true,
-      publicKeyEndpoint: environment.apiUrl + '/crypto/init',
+      publicKeyEndpoint: 'https://api.yourdomain.com/crypto/init',
       expectedPublicKeyHash: 'your-sha256-hash-here',
-      encryptDecryptForEndpoints: ['*'],
-      skipEncryptDecryptForEndpoints: ['/public/*'],
       publicKeyHeaderName: 'X-Client-Init',
+      publicKeyFetchRetries: 3,
       aesKeyHeaderName: 'X-Request-Context',
       ivHeaderName: 'X-Client-Ref',
       enableDebugLogging: true,
-      publicKeyFetchRetries: 3
+      encryptDecryptForEndpoints: ['*'],
+      skipEncryptDecryptForEndpoints: ['/public/*']
+    })
+  ]
+};
+```
+
+**Option 2: Provide Public Key Directly (Skip API Call)**
+
+```typescript
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideNgSecureFetch({
+      enableEncryption: true,
+      publicKey: `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
+-----END PUBLIC KEY-----`,
+      aesKeyHeaderName: 'X-Request-Context',
+      ivHeaderName: 'X-Client-Ref',
+      enableDebugLogging: false,
+      encryptDecryptForEndpoints: ['/insurance/*'],
+      skipEncryptDecryptForEndpoints: ['/public/*']
     })
   ]
 };
@@ -79,17 +101,55 @@ All HTTP requests matching your endpoint patterns are now automatically encrypte
 ```typescript
 interface SecurityConfig {
   enableEncryption?: boolean;                  // Master switch (default: true)
-  publicKeyEndpoint?: string;                  // API endpoint for public key
-  expectedPublicKeyHash?: string;              // SHA-256 hash for MITM prevention
-  encryptDecryptForEndpoints?: string[];       // Endpoint patterns (default: ['*'])
-  skipEncryptDecryptForEndpoints?: string[];   // Exclude patterns (higher priority)
-  publicKeyHeaderName?: string;                // Custom public key header (default: 'X-Client-Init')
+  publicKeyEndpoint?: string;                  // API endpoint for public key (optional if publicKey provided)
+  publicKey?: string;                          // Direct public key in PEM format (skips API call)
+  expectedPublicKeyHash?: string;              // SHA-256 hash for MITM prevention (optional if publicKey provided)
+  publicKeyHeaderName?: string;                // Custom public key header (default: 'X-Client-Init', optional if publicKey provided)
+  publicKeyFetchRetries?: number;              // Retry attempts (default: 3, optional if publicKey provided)
   aesKeyHeaderName?: string;                   // Custom AES key header (default: 'X-Request-Context')
   ivHeaderName?: string;                       // Custom IV header (default: 'X-Client-Ref')
   enableDebugLogging?: boolean;                // Console logs (default: false)
-  publicKeyFetchRetries?: number;              // Retry attempts (default: 3)
+  encryptDecryptForEndpoints?: string[];       // Endpoint patterns (default: ['*'])
+  skipEncryptDecryptForEndpoints?: string[];   // Exclude patterns (higher priority)
 }
 ```
+
+### Key Configuration Properties
+
+#### `enableEncryption` (default: `true`)
+Master switch to enable/disable encryption globally.
+- `true`: Encryption is active
+- `false`: Bypass all encryption (app continues normally without encryption)
+
+**⚠️ Important:** If `enableEncryption: true` and public key fetch fails, the app will NOT render. To bypass this, set `enableEncryption: false`.
+
+#### Two Ways to Provide Public Key
+
+**Method 1: Fetch from API (Dynamic)**
+```typescript
+provideNgSecureFetch({
+  enableEncryption: true,
+  publicKeyEndpoint: 'https://api.yourdomain.com/crypto/init',  // API endpoint to fetch public key
+  expectedPublicKeyHash: 'abc123...',  // SHA-256 hash for MITM protection
+  publicKeyHeaderName: 'X-Client-Init', // Response header containing public key
+  publicKeyFetchRetries: 3              // Number of retry attempts on failure
+  // ...rest of config
+})
+```
+
+**Method 2: Provide Directly (Static)**
+```typescript
+provideNgSecureFetch({
+  enableEncryption: true,
+  publicKey: '-----BEGIN PUBLIC KEY-----\nMIIB...\n-----END PUBLIC KEY-----',
+  // No need for: publicKeyEndpoint, expectedPublicKeyHash, publicKeyHeaderName, publicKeyFetchRetries
+  // ...rest of config
+})
+```
+
+**When to use each:**
+- **API Method**: Production apps where keys may rotate, requires backend endpoint
+- **Direct Method**: Development/testing, static keys, or when you don't have a `/crypto/init` endpoint
 
 ## Endpoint Pattern Matching
 
@@ -124,24 +184,6 @@ The `{ignore}` placeholder matches any non-slash characters, perfect for dynamic
 
 Use `skipEncryptDecryptForEndpoints` to exclude specific endpoints even if they match `encryptDecryptForEndpoints`:
 
-```typescript
-provideNgSecureFetch({
-  enableEncryption: true,
-  
-  // Encrypt all API endpoints
-  encryptDecryptForEndpoints: ['*'],
-  
-  // But skip these specific endpoints (higher priority)
-  skipEncryptDecryptForEndpoints: [
-    '/v1/public/*',                    // Skip all public APIs
-    '/v1/health/check',                // Skip health check
-    'v1/user/{ignore}/profile/image'   // Skip profile image endpoints
-  ],
-  
-  // ...other config
-})
-```
-
 **Priority:**
 1. `skipEncryptDecryptForEndpoints` is checked **first** (if match → skip encryption)
 2. `encryptDecryptForEndpoints` is checked **second** (if match → encrypt)
@@ -172,6 +214,13 @@ skipEncryptDecryptForEndpoints: ['/v1/business/public/*']
 ## How It Works
 
 ### Initialization
+
+**If using `publicKey` (direct configuration):**
+1. Import provided PEM key from config
+2. Verify hash if `expectedPublicKeyHash` is provided
+3. Continue app initialization (instant, no API call)
+
+**If using `publicKeyEndpoint` (API fetch):**
 1. Check sessionStorage for cached PEM key
 2. If found: validate hash, import key, continue (5-10ms)
 3. If not found: fetch from API, verify hash, cache, continue (200-300ms)
@@ -230,12 +279,15 @@ By default, the library expects the public key in the `X-Client-Init` header. Yo
 // app.config.ts or app.module.ts
 provideNgSecureFetch({
   enableEncryption: true,
-  publicKeyEndpoint: environment.apiUrl + '/crypto/init',
-  publicKeyHeaderName: 'X-Custom-Public-Key',  // Custom header name
+  publicKeyEndpoint: 'https://api.yourdomain.com/crypto/init',
   expectedPublicKeyHash: 'your-sha256-hash-here',
-  encryptDecryptForEndpoints: ['*'],
+  publicKeyHeaderName: 'X-Custom-Public-Key',  // Custom header name
+  publicKeyFetchRetries: 3,
+  aesKeyHeaderName: 'X-Request-Context',
+  ivHeaderName: 'X-Client-Ref',
   enableDebugLogging: false,
-  publicKeyFetchRetries: 3
+  encryptDecryptForEndpoints: ['*'],
+  skipEncryptDecryptForEndpoints: []
 })
 ```
 
@@ -262,14 +314,15 @@ You can also customize the headers used for AES key and IV exchange:
 // app.config.ts or app.module.ts
 provideNgSecureFetch({
   enableEncryption: true,
-  publicKeyEndpoint: environment.apiUrl + '/crypto/init',
+  publicKeyEndpoint: 'https://api.yourdomain.com/crypto/init',
+  expectedPublicKeyHash: 'your-sha256-hash-here',
   publicKeyHeaderName: 'X-Custom-Public-Key',
+  publicKeyFetchRetries: 3,
   aesKeyHeaderName: 'X-Custom-AES-Key',      // Custom AES key header
   ivHeaderName: 'X-Custom-IV',                // Custom IV header
-  expectedPublicKeyHash: 'your-sha256-hash-here',
-  encryptDecryptForEndpoints: ['*'],
   enableDebugLogging: false,
-  publicKeyFetchRetries: 3
+  encryptDecryptForEndpoints: ['*'],
+  skipEncryptDecryptForEndpoints: []
 })
 ```
 
@@ -302,14 +355,15 @@ Access-Control-Expose-Headers: X-Custom-AES-Key, X-Custom-IV
 
 | Issue | Solution |
 |-------|----------|
+| App won't load / white screen | Public key fetch failed. Check network tab for `/crypto/init`, verify endpoint reachable. To bypass encryption and render app, set `enableEncryption: false` |
 | Hash mismatch | Check console for actual hash, update `expectedPublicKeyHash` |
 | Header not found | Backend must add: `Access-Control-Expose-Headers: X-Client-Init` (or custom header name) |
 | Custom header not found | Set `publicKeyHeaderName` in config and ensure backend sends that header |
 | Custom AES/IV headers not found | Set `aesKeyHeaderName` and `ivHeaderName` in config; backend must send custom headers and expose them in CORS |
-| App won't load | Check network tab for `/crypto/init`, verify endpoint reachable |
 | Not encrypting | Check URL matches endpoint patterns, try `['*']` to test |
 | Decryption fails | Verify backend sends AES key and IV headers (default: `X-Request-Context`, `X-Client-Ref` or your custom names) |
 | Pattern not matching | Enable debug logging to see pattern matching details |
+| Want to skip API call | Use `publicKey` property to provide public key directly in config |
 
 ## Key Improvements
 
@@ -358,44 +412,22 @@ ng-secure-fetch/
 ## Changelog
 
 ### v1.0.0 (Current)
-- Renamed from "security" to "ng-secure-fetch"
-- Updated function name from `provideSecurity()` to `provideNgSecureFetch()`
-- Added npm publishing metadata
+- RSA-2048-OAEP + AES-256-GCM hybrid encryption
 - Browser environment only (Web Crypto API)
+- Angular 16+ compatibility (requires Signals API)
+- Automatic HTTP request/response encryption via interceptors
+- SessionStorage caching for public key (95% faster page refresh)
+- Public key pinning with SHA-256 hash verification
+- Direct public key configuration option (skip API call with `publicKey` property)
 - `skipEncryptDecryptForEndpoints` configuration (exclusion patterns with higher priority)
+- Dynamic segment support with `{ignore}` placeholder in endpoint patterns
+- Advanced pattern matching (glob patterns, exact match, dynamic segments)
 - Error response decryption (4xx, 5xx status codes)
 - Enhanced error structure with `Object.assign()` for backward compatibility
-- Updated `matchesPattern()` to support skip patterns
-- Added debug logging for POST/PUT/PATCH request bodies
-- Added dynamic segment support with `{ignore}` placeholder
-- Moved `matchesPattern()` to `CryptoService` (DRY principle)
-- Improved CORS error messages
-- SessionStorage caching (95% faster refresh)
-- Automatic HTTP interceptors
-- Public key pinning
-
-## Building the Library
-
-To build the library for distribution:
-
-```bash
-ng build ng-secure-fetch
-```
-
-Build artifacts will be in `dist/ng-secure-fetch/`.
-
-## Publishing to npm
-
-```bash
-cd dist/ng-secure-fetch
-npm publish
-```
-
-## Running Tests
-
-```bash
-ng test ng-secure-fetch
-```
+- Customizable header names (public key, AES key, IV)
+- Debug logging for troubleshooting
+- Improved CORS-aware error messages
+- Zero dependencies (removed tslib)
 
 ## License
 

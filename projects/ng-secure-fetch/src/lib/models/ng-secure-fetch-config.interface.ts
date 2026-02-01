@@ -14,10 +14,13 @@ export interface SecurityConfig {
   /** Master switch: true = fetch key + encrypt/decrypt, false = bypass all (default: true) */
   enableEncryption?: boolean;
 
-  /** Full public key endpoint URL (required if enableEncryption is true) */
+  /** Full public key endpoint URL (required if enableEncryption is true and publicKey is not provided) */
   publicKeyEndpoint?: string;
 
-  /** Expected SHA-256 hash for public key pinning (MITM protection) */
+  /** Direct public key in PEM format (if provided, skips API call to publicKeyEndpoint) */
+  publicKey?: string;
+
+  /** Expected SHA-256 hash for public key pinning (MITM protection) - optional if publicKey is provided directly */
   expectedPublicKeyHash?: string;
 
   /** Endpoint patterns to encrypt: ['*'] = all, ['/api/*'] = glob, ['/exact/path'] = exact (default: ['*']) */
@@ -26,7 +29,7 @@ export interface SecurityConfig {
   /** Endpoint patterns to skip encryption (higher priority than encryptDecryptForEndpoints) */
   skipEncryptDecryptForEndpoints?: string[];
 
-  /** Custom header name for public key exchange (default: 'X-Client-Init') */
+  /** Custom header name for public key exchange (default: 'X-Client-Init') - optional if publicKey is provided directly */
   publicKeyHeaderName?: string;
 
   /** Custom header name for AES key in request/response (default: 'X-Request-Context') */
@@ -38,7 +41,7 @@ export interface SecurityConfig {
   /** Enable debug logging (default: true) */
   enableDebugLogging?: boolean;
 
-  /** Retry attempts for public key fetch (default: 3) */
+  /** Retry attempts for public key fetch (default: 3) - optional if publicKey is provided directly */
   publicKeyFetchRetries?: number;
 }
 

@@ -4,7 +4,7 @@ This is the development workspace for **ng-secure-fetch** - a zero-dependency An
 
 ## About ng-secure-fetch
 
-ng-secure-fetch is a browser-only Angular library (17+) that uses the Web Crypto API to provide transparent encryption/decryption for HTTP requests and responses.
+ng-secure-fetch is a browser-only Angular library (16+) that uses the Web Crypto API to provide transparent encryption/decryption for HTTP requests and responses.
 
 **Key Features:**
 - Hybrid encryption: RSA-2048-OAEP + AES-256-GCM
