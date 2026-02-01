@@ -1,6 +1,6 @@
 {
   "name": "ng-secure-fetch",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Zero-dependency Angular library providing RSA-2048-OAEP + AES-256-GCM hybrid encryption with automatic HTTP request/response encryption and sessionStorage caching",
   "keywords": [
     "angular",

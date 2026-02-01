@@ -411,7 +411,7 @@ ng-secure-fetch/
 
 ## Changelog
 
-### v1.0.0 (Current)
+### v1.1.0 (Current)
 - RSA-2048-OAEP + AES-256-GCM hybrid encryption
 - Browser environment only (Web Crypto API)
 - Angular 16+ compatibility (requires Signals API)
