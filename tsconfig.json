@@ -34,6 +34,12 @@
     },
     {
       "path": "./projects/ng-secure-fetch/tsconfig.spec.json"
+    },
+    {
+      "path": "./projects/ng-secure-fetch-implementation/tsconfig.app.json"
+    },
+    {
+      "path": "./projects/ng-secure-fetch-implementation/tsconfig.spec.json"
     }
   ]
 }

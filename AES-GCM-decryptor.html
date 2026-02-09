@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AES-GCM Decryptor</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #0b5fff;
+      margin-top: 0;
+    }
+    .input-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #333;
+    }
+    input[type="text"], textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+    }
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+    .output-area {
+      min-height: 200px;
+      background: #f8f9fa;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 16px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      overflow-x: auto;
+    }
+    button {
+      background: #0b5fff;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    button:hover {
+      background: #0847cc;
+    }
+    button.secondary {
+      background: #6c757d;
+    }
+    button.secondary:hover {
+      background: #5a6268;
+    }
+    .status {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .status.success {
+      background: #d4edda;
+      border: 1px solid #c3e6cb;
+      color: #155724;
+      display: block;
+    }
+    .status.error {
+      background: #f8d7da;
+      border: 1px solid #f5c6cb;
+      color: #721c24;
+      display: block;
+    }
+    .info {
+      background: #e7f3ff;
+      border: 1px solid #b3d9ff;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      color: #004085;
+    }
+    .info code {
+      background: rgba(0,0,0,0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔓 AES-GCM Decryptor</h1>
+    
+    <div class="info">
+      <strong>ℹ️ How to use:</strong><br>
+      1. Paste the <code>X-Request-Context</code> response header value (base64 AES key)<br>
+      2. Paste the <code>X-Client-Ref</code> response header value (base64 IV)<br>
+      3. Paste the encrypted data (base64 encrypted data)<br>
+      4. Click "Decrypt Data" to see the decrypted JSON
+    </div>
+
+    <div class="status" id="status"></div>
+
+    <div class="input-group">
+      <label for="aesKey">X-Request-Context (AES Key - Base64):</label>
+      <input 
+        type="text" 
+        id="aesKey" 
+        placeholder="e.g., 5OSHUwr0XeCSmtHowGfbBozUnpxXnHz7mZdPfeqtuWI="
+      />
+    </div>
+
+    <div class="input-group">
+      <label for="iv">X-Client-Ref (IV - Base64):</label>
+      <input 
+        type="text" 
+        id="iv" 
+        placeholder="e.g., kcFNmxVUnwxzuvDp"
+      />
+    </div>
+
+    <div class="input-group">
+      <label for="encryptedData">Encrypted Data (Base64):</label>
+      <textarea 
+        id="encryptedData" 
+        placeholder="Paste the encrypted data here (with or without quotes)..."
+      ></textarea>
+    </div>
+
+    <div>
+      <button onclick="decryptResponse()">🔓 Decrypt Data</button>
+      <button class="secondary" onclick="clearAll()">🗑️ Clear All</button>
+      <button class="secondary" onclick="copyResult()">📋 Copy Result</button>
+    </div>
+
+    <div class="input-group" style="margin-top: 24px;">
+      <label>Decrypted JSON Output:</label>
+      <div class="output-area" id="output">Decrypted data will appear here...</div>
+    </div>
+  </div>
+
+  <script>
+    // Convert Base64 to ArrayBuffer
+    function base64ToArrayBuffer(base64) {
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return bytes.buffer;
+    }
+
+    // Import AES key from raw bytes
+    async function importAESKey(aesKeyBytes) {
+      return await window.crypto.subtle.importKey(
+        'raw',
+        aesKeyBytes,
+        { name: 'AES-GCM' },
+        false,
+        ['decrypt']
+      );
+    }
+
+    // Show status message
+    function showStatus(message, isError = false) {
+      const status = document.getElementById('status');
+      status.textContent = message;
+      status.className = 'status ' + (isError ? 'error' : 'success');
+    }
+
+    // Decrypt the response
+    async function decryptResponse() {
+      try {
+        // Get input values
+        let aesKeyBase64 = document.getElementById('aesKey').value.trim();
+        let ivBase64 = document.getElementById('iv').value.trim();
+        let encryptedData = document.getElementById('encryptedData').value.trim();
+
+        // Validate inputs
+        if (!aesKeyBase64 || !ivBase64 || !encryptedData) {
+          showStatus('❌ Please fill in all fields', true);
+          return;
+        }
+
+        // Remove quotes if present
+        encryptedData = encryptedData.replace(/^["']|["']$/g, '');
+        aesKeyBase64 = aesKeyBase64.replace(/^["']|["']$/g, '');
+        ivBase64 = ivBase64.replace(/^["']|["']$/g, '');
+
+        showStatus('🔄 Decrypting...');
+
+        // Convert base64 to ArrayBuffers
+        const encryptedBytes = base64ToArrayBuffer(encryptedData);
+        const aesKeyBytes = base64ToArrayBuffer(aesKeyBase64);
+        const ivBytes = base64ToArrayBuffer(ivBase64);
+
+        // Import AES key
+        const aesKey = await importAESKey(aesKeyBytes);
+
+        // Decrypt using AES-GCM
+        const decryptedBuffer = await window.crypto.subtle.decrypt(
+          { name: 'AES-GCM', iv: ivBytes },
+          aesKey,
+          encryptedBytes
+        );
+
+        // Decode and parse
+        const decoder = new TextDecoder();
+        const decryptedWithPadding = decoder.decode(decryptedBuffer);
+        
+        // Remove padding (data before '||')
+        const [actualData] = decryptedWithPadding.split('||');
+
+        // Parse JSON and beautify
+        const jsonObject = JSON.parse(actualData);
+        const beautified = JSON.stringify(jsonObject, null, 2);
+
+        // Display result
+        document.getElementById('output').textContent = beautified;
+        showStatus('✅ Successfully decrypted!');
+
+      } catch (error) {
+        console.error('Decryption error:', error);
+        showStatus('❌ Decryption failed: ' + error.message, true);
+        document.getElementById('output').textContent = 'Error: ' + error.message;
+      }
+    }
+
+    // Clear all fields
+    function clearAll() {
+      document.getElementById('aesKey').value = '';
+      document.getElementById('iv').value = '';
+      document.getElementById('encryptedData').value = '';
+      document.getElementById('output').textContent = 'Decrypted data will appear here...';
+      document.getElementById('status').className = 'status';
+    }
+
+    // Copy result to clipboard
+    async function copyResult() {
+      const output = document.getElementById('output').textContent;
+      if (output === 'Decrypted data will appear here...' || output.startsWith('Error:')) {
+        showStatus('⚠️ Nothing to copy', true);
+        return;
+      }
+      
+      try {
+        await navigator.clipboard.writeText(output);
+        showStatus('✅ Copied to clipboard!');
+      } catch (err) {
+        showStatus('❌ Failed to copy', true);
+      }
+    }
+
+    // Allow Enter key to decrypt (when not in textarea)
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+        decryptResponse();
+      }
+    });
+  </script>
+</body>
+</html>
